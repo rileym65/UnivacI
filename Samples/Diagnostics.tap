@@ -1,0 +1,11 @@
+[000] 11 000 31 060    [ Read first diagnostic segment ]
+[001] R0 999 U0 060    [ Then call diagnostic          ]
+[002] 90 000 00 000    [ Exit                          ]
+<060> U0 062 00 063    [ Unconditional mump            ]
+[061] 50 064 90 000    [ Print error and stop          ]
+[062] 50 065 90 000    [ Print error and stop          ]
+[063] 50 066 U0 067    [ Print success and continue    ]
+[064] 1\dERR\d1\d\d\d\d\r
+[065] 1\dERR\d2\d\d\d\d\r
+[066] 1\dGOOD\d\d\d\d\d\r
+[067] 90 000 00 000

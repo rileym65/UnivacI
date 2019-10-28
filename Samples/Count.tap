@@ -1,0 +1,18 @@
+[000] B00 009 C00 010    [ Set current count to zero ]
+[001] 500 010 000 000    [ Print the current count ]
+[002] B00 010 A00 008    [ Get the current count and add 1 ]
+[003] H00 010 L00 007    [ Store current count back to 10, Load terminal count into L ]
+[004] 000 000 Q00 006    [ Jump to 006 if terminal count has been reached ]
+[005] 000 000 U00 001    [ Otherwise loop back to 001 ]
+[006] 900 000            [ Program is done, halt the machine ]
+[007] 00000000100\r      [ Constant Terminal count ]
+[008] 000000000010       [ Constant 1 ]
+[009] 00000000000\r      [ Constant 0 ]
+[010] 00000000000\r      [ Will hold current count ]
+[011] 000 000 000 00\r
+
+
+
+
+
+

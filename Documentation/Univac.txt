@@ -1,0 +1,760 @@
+UNIVAC I
+UNIVersal Automatic Computer I
+
+  The first UNIVAC I was completed in March of 1951.  It is considered to be
+the second commercial computer, with the LEO I being the first.  However, the
+UNIVAC I was the first commercial computer in the US and is the first considered
+to be mass produced, with 46 systems being built.
+
+  The UNIVAC I consisted of 5,200 vacuum tubes, weighed around 29,000 pounds
+and consumed 125kw of power to run.  The central complex of the machine (cpu
+and memory) was 4.3 meters by 2.4 meters and 2.6 meters high.  The complete
+system occupied more then 35.5 square meters of floor space.  The machine could
+perform about 1,900 operations per second with a clock speed of 2.25 mhz.
+
+  Like the EDSAC, UNIVAC I used mercury delay lines for its main memory as well
+as the majority of its registers.
+
+
+Memory:
+=======
+  The main memory of the UNIVAC consisted of 1000 words, each containing 12
+characters.  Each character consisted of 6 bits plus a parity bit.  The main
+memory was used to store both running programs as well as data.
+  
+  Each cell of memory could hold either:
+    1. A single 11 digit number plus sign character
+    2. 12 characters of alpha numeric data
+    3. 2 executable instructions
+
+  Each character in memory consists of the following format:
+  PZZNNNN
+  |\|\   \
+  | | +---+--- Number
+  | +--------- Zone
+  +----------- Parity (Invisible to the programmer)
+
+
+Numeric Format:
+===============
+  Univac stores numbers in memory in BCD format.  As such, the Univac is not
+considered to be a binary machine but rather a decimal machine.  Each location
+in memory can hold an 11 digit number plus the sign.  The format looks like:
+
+SMMMMMMMMMMM
+|\          \
+| +----------+--- Mantissa of number
++---------------- Sign
+
+  For a number to be negative then the sign must be '-', which in binary would
+be 0010.  Any other character, Univac will interpret the number as positive.
+Each position, including the sign, is stored in 6 bits plus a parity bit.  The
+parity bit is invisible to the programmer.
+
+
+Excess-3
+========
+  Univac stores numbers in memory in Excess-3 format.  Below is a table showing
+the translation of decimal numbers to Excess-3:
+
+  0 - 0011        5 - 1000
+  1 - 0100        6 - 1001
+  2 - 0101        7 - 1010
+  3 - 0110        8 - 1011
+  4 - 0111        9 - 1100
+  
+
+Machine Cycle:
+==============
+  It is important to note that each instruction is 6 characters long and two
+instructions can be placed into each word of memory.  The two instructions are
+refered to as the 'left' instruction and the 'right' instruction.  Both 
+instructions in a word are always executed, even if the left instruction is a
+branch instruction, the right instruction will still be executed before the
+branch is taken.
+
+  A complete machine cycle consists of four phases, named alpha, beta, gamma,
+and delta.  What occurs during each of these phases is as follows:
+
+  alpha - The right 6 characters of the CC register are loaded into the 
+          static register.
+  beta  - The memory cell pointed to by the static register will be loaded
+          into the CR register.  Also during this phase CC will be sent to
+          the adder and will be incremented by 1.
+  gamma - The left 6 characters of register CR will be loaded into the static
+          register and executed as an instruction.
+  delta - The right 6 characters of register CR will be loaded into the static
+          register and executed as an instruction.
+
+  As can be seen by the phase sequence, if the instruction executed as the
+gamma phase branched elsewhere in the program, the right instruction of the 
+last read instruction pair is still executed during the delta phase.
+
+  Another important note about the branch instructions.  The way these
+instructions work is to take the low 3 digits of the CR register and place
+them into the low 3 digits of the CC register.  This means that the address
+of the jump will be the address specified by the right instruction, even if
+the branch instruction itself is the left instruction.
+
+
+Registers:
+==========
+Name    Size     Description
+  A      1       Accumulator
+  X      1       eXtension register
+  L      1       Stores second argument
+  F      1       
+  V      2       Used for two word transfers
+  Y      10      Used for ten word transfers
+  I      60      Used to read block from tape
+  O      60      Used to write block to tape
+ CC      1       Control Counter, holds address of next instruction pair
+ CR      1       Control Register, Holds current pair of instructions
+Note: Size is in words (12 characters)
+
+
+Instruction Format:
+===================
+IC0 mmm
+|/| \ /
+| |  +------ Memory address
+| +--------- Ignored
++----------- Instruction code
+
+
+Instruction codes:
+==================
+A  - Add            [m]->X, A=A+X
+B  - Bring          [m]->A, [m]->X
+C  - Clear          A->[m], 0->A
+D  - Divide         [m]->A, A/L->A(rounded),X(unrounded)
+E  - Extract        A,[m] extract F->A 
+F  - Load F         [m]->F
+G  - Store F        F->[m]
+H  - Hold           A->[m]
+J  - Store X        X->[m]
+K  - Move A         A->L, 0->A
+L  - Load L         [m]->L, [m]->X
+M  - Multiply       [m]->X, X*L->A
+N  - Multiply neg   -[m]->X, X*L->A
+P  - Multiply long  [m]->X, X*L->A,X
+Q  - Jump Equal     If A=L jump to m
+R  - Record         U(CC+1)->[m]
+S  - Subtract       -[m]->X, A=A+X
+T  - Transfer       If A>L jump to m
+U  - Unconditional  jump to m
+V  - Load V         [m][m+1]->V
+W  - Store V        V->[m][m+1]
+X  - Add X          A=A+X
+Y  - Load Y         [m]...[m+9]->Y
+Z  - Store Y        Y->[m]...[m+9]
+.n - Shift right    A >>= n, clobbers sign
+;n - Shift left     A <<= n, clobbers sign
+-n - Shift right    A >>= n, keep sign
+0n - Shift left     A <<= n, keep sign
+00 - NOP            Do nothing
+10 - Key input      Keyboard -> [m]
+1n - Read Tape      Read next 60 words into I
+2n - Read Backwards Read backwards 60 words into I
+30 - Store I        I->[m]...[m+59]
+3n - Store/Read     I->[m]...[m+59], read next 60 words
+40 - Store I        I->[m]...[m+59]
+4n - Store/Read     I->[m]...[m+59], Read next 60 words backwards
+50 - Print          [m]->teleprinter
+5n - Write Tape     [m]...[m+59] -> tape n
+6n - Rewind Tape    rewind tape n
+7n - Write Tape     [m]...[m+59] -> tape n
+8n - Rewind Tape    rewind tape n
+90 - Halt           Halt machine
+,  -                Breakpoint stop
+
+
+Instruction Notes:
+==================
+
+A, X, S
+-------
+  The addition/subtraction commands can actually work around some non-numeric
+characters appearing in the arguments.  If while performing the operation a
+non-numeric character (zone bits not zero) in one of the arguments will be 
+passed through to the output.  This allows you to do things like this:
+
+ [000] B 002 A 003
+ [001] C 004 9
+ [002] FUEL=0000123
+ [003] 000000000001
+
+  Which would prodcue the value FUEL=0000124
+
+  This passthrough only works if only one of the arguments has a non-numeric
+character in the same corresponding position as the other.  If the same 
+position in both arguments have non-numeric characters then a Adder Alph 
+error will be produced and the system will stop.
+
+  It is also important to note that a carry will not carry through an alpha
+character.  So for example if you were to add these two together:
+
+  000000A6000
+  00000017000
+
+  You would get:
+
+  000000A3000
+
+  The carry from the addition of the 6 and 7 becomes lost due to the alpha
+character.
+
+F
+-
+  The extract (F) instruction works by merging A with the specified memory
+address, storing the results in A.  The command works by looking at the low
+bit in each character of F, if the bit is clear then the value for the position
+stored into A will be the character from the memory, else if the lowest bit
+in the corresponding character position in F is set the value in A will be
+used.  Here is an example of how this works:
+
+  [000] B 003 F 005
+  [001] E 004 C 006
+  [002] 5 006 9
+  [003] YEAR\d=\d0000\d
+  [004] 000000020140
+  [005] 000000011110
+
+  Memory position 005 contains the selector, remember that the values are 
+stored in memory in excess-3, so the zeores (0) have the lowest bit set while
+the ones (1) have the lowest bit clear.  After running this program memory
+location 6 would be:
+  
+  [006] YEAR\d=\d2014\d
+
+  And the value printed on the printer will be:
+
+  YEAR = 2014
+
+Q, T, U
+-------
+  The most important thing to remember about the transfer instructions is that
+the address of where to jump comes from the low 3 digits of the CR register
+and not from the command itself.  If the transfer instruction is the right
+instruction then it will act like you expect, but if the transfer instruction
+is the left one, then it will be using the address of the right instruction
+as the location to jump to.  For example:
+
+  [001] U 010 B 020
+
+  This will actually cause a transfer to 020 and not 010.
+
+  Another important thing to remember about transfer instructions when they
+are the left instruction is that the right instruction will get executed
+whether or not a jump takes place.  So in the above example the B 020
+instruction will also be executed, placing the value in memory position 020
+into the A and X registers.
+
+  If the transfer instruction is one of the conditional trasfers, Q or T then
+the second character of the instruction is used to determine if a breakpoint
+needs to occur.  If the conditional breakpoint button is pressed that 
+corresponds with the second instruction character then a breakpoint will 
+occur.  During the breakpoint the operator can see on the Conditional
+Transfer lamp if a jump will occur or not.  The operator can also override
+the result and cause or prevent a jump.  For example:
+
+  [000] T5 100
+
+  This command will halt the computer if the conditional breakpoint button
+number 5 is pressed.
+
+R
+-
+  The Record (R) command is used in order to setup the return from a
+subroutine.  It will take the value in the CC register and make a U command
+from it and place it at the destination address.  Here is a sample program:
+
+  [000] B 003 A 004   [ Get value in 003 and then add value in 004 to it ]
+  [001] R 007 U 006   [ Setup return address at 007, then call subroutine 006 ]
+  [002] 9             [ Halt computer ]
+  [003] 000000000123  [ First constant ]
+  [004] 000000000456  [ Second constant ]
+  [005] 000000000000  [ Temp storage ]
+  [006] C 005 5 005   [ Store answer and print it ]
+  [007] 0 000 0 000   [ REturn jump will be placed here ]
+
+  When the R 007 is executed at 001 a 000000 U000002 will be placed at 007,
+providing a return from the subroutine.
+
+., ;, 0, -
+----------
+  The important thing to understand about shift instructions is that they
+shift the value digit positions and not bit positions, for example:
+
+  [000] B 002 ;2 000
+  [001] C 003 9
+  [002] 000012300000
+
+  This program when run will place 001230000000 into memory at 3.
+
+  Shift instructions also ignore the address field of the instruction.  Shift
+instructions always work on the A register.
+
+
+Overflow Handling:
+==================
+  The A, X, S, M, and D commands could produce an overflow condition.  If an
+overflow occurs then the second character of the instruction determines how it
+will be handled.  
+
+  If the second character is a '-' character then the machine will halt on
+overflow  immediately following the instruction.  The Stall, Stop, and
+Overflow lights will all be on.
+
+  If the second character is any character but '-' then the following 4 phases
+will be executed before resuming normal program operation:
+
+  alpha - Place 000000 into the SR register
+  beta  - Memory address zero is transferred to register CR.  Unlike a normal
+          beta phase, register CC will not be touched.
+  gamma - The left instruction is executed in the same fashion as a normal
+          gamma phase.
+  delta - The right instruction is executed in the same fashion as a normal
+          delta phase.
+
+  An important note to this processing.  If the overflow occured while
+executing the left instruction, the right instrucion will still be executed
+normally before the special overflow phases occur.
+
+
+Tape Format:
+============
+  The tape format used by the simulator is pretty straight forward and easy to
+deal with.  The tape file is represented in a pure text format.  Each line of
+the text file is one word (12 characters).  The first line is position 0, next
+line is one, and so forth.  A simple program on tape in the base format would
+look like:
+
+B00002A00003
+C00004900000
+000000000123
+000000000456
+
+  The simulation adds some enhancements to the format to make programs easier
+to read.  First, spaces are mostly ignored, so the above program could be 
+entered in the tape file as:
+
+B00002 A00003
+C00004 900000
+000000000123
+000000000456
+
+  Or even as:
+
+B00 002 A00 003
+C00 004 900 000
+000000000123
+000000000456
+
+  When the characters of a word are read they are read in 3 character groups.
+A space will complete a 3 character group.  If the current group has less than
+3 characters then zeroes (0) will be added to make the group a full 3
+characters.  Where the zeroes get added is based upon which group is currently
+being read.  The first and third groups will add padding zeroes to the end.
+For example: C would become C00.  The second and fourth groups will add the
+zeroes to the beginning. Example: 4 becomes 004.  This is to make it so you
+do not have to add unnecesary zeroes when type out commands.  So our program
+could be written on the tape as:
+
+B 2 A 3
+C 4 9
+000000000123
+000000000456
+
+  All of the preceding programs would end up in memory the same as the original
+format that contained no spaces.
+
+  Comments can be added to the tape file by placing them between square
+brackets.  Another tape sample:
+
+[000] B 002 A 003         [ Set A to value in m(2) and then add m(3) ]
+[001] C 004 9             [ Store value in m(4) and then end ]
+[003] 000000000123
+[004] 000000000456
+
+  This allows you to comment your programs so you have a better idea of what
+they are doing without having to figure out the instructions.
+
+  The tape reader only reads the first 12 valid characters when reading a word
+from tape, therefore any characters after the first 12 valid characters will
+also act as comments.  So the above program could be written as:
+
+[000] B 002 A 003         Set A to value in m(2) and then add m(3)
+[001] C 004 9 000         Store value in m(4) and then end
+[002] 000000000123
+[003] 000000000456
+
+  If you use the implied comments, then be sure there are 12 valid characters
+to be read before the implied comment.
+
+  The Univac internal character set does not support lower case, all characters
+are upper case.  Any lowercase characters found while reading a tape will be
+converted to uppercase.  For example: b 002 a 003 will become B 002 A 003.
+
+  The exception to the automatic case conversion is when the character is
+preceeded by the escape (\) character.  Then the lowercase letter is kept and
+generally implies a control procedure.  If there is no control procedure for
+the lowercase letter then it will be encoded as 0.  The valid control codes 
+are:
+   
+   \d     - Translates to a character space
+   \t     - Translates to a tab character
+   \r     - Translates to a carriage return character
+   \i     - Produces an ignore character
+
+  Using control characters you can place control code data on your tapes.  For
+example:
+
+  UNIVAC\dI - Would be how you would encode "UNIVAC I"
+
+  The last shortcut that can be used is an instruction to the tape mounter.
+Often you may need to place data at a particular position on the tape.  This
+can be accomplised with the < and > characters.  When the tape mounter 
+encounters the < as the first character on a line, it will get the number 
+between the < and > character and interpret that as the next position of the 
+tape.  So for example you could create a tape like:
+
+[000] B 030 A 031
+[001] C 002 9 000
+<030> 000000000123
+[031] 000000000456
+
+  When the tape mounter encounters the <030> it will create all the necessary
+blank lines so that the 000000000123 will actually be in the 30th position.
+Once the position is changed using this method that becomes the new pointer
+for additional lines.  If at some point in the above tape you wanted to set
+the third position you would have to use <002> to reset the tape pointer.
+
+  Any < character found that is not the first character on the line will be
+interpreted the same as a [ comment start character.  > Will always be 
+interpreted as a comment end character, but must match an inital < for use
+in changing the tape pointer.
+
+
+Operator Console:
+=================
+  The operator console of the Univac consisted of many many controls, many of
+which are used for determining and correcting errors in the system.  This 
+Univac simulator reproduces (more or less) the central section of the operator
+console, which was the most useful to the operator.  The panel in the simulator
+is laid out similar to the original Univac layout.  Even tho most of the lamps
+and switches are reproduced, not all of them will affect the simulator.  The
+portions of this console that actually operate in the simulator will be 
+detailed below.
+
+  The Left console (not simulated) was mainly used during computer startup and
+for monitoring the state of memory and the mercury delay lines.  In the scope
+of this simulator most of the functions of the left console have no real 
+purpose in a software simulation and are therefore not present.
+
+  the right console consisted mostly of controls for monitoring the voltages
+within Univac and again are not relevent in a software simulation, and have 
+therefore been omited.
+
+  The numerous lamps and switches across the top edge of the console were for
+indicating and resetting errors.  Univac consisted of a lot of duplicated
+elements and many of the errors occur when duplicated elements do not agree
+with each other.  In a software simulation most of these simply cannot occur
+and therefore are not simulated.
+
+  For the most part controls will be described from top to bottom, left to 
+right.
+
+Adder Alph
+----------
+  The lamps above this switch indicate the logical error condition where during
+addition/subtraction 2 non-numeric characters are encountered.  Depressing this
+switch will clear the error.
+
+F.T. Inter
+----------
+  The light above this switch indicates an invalid instruction.  If the first
+character of an instruction is not one of the defined instructions, the 
+computer will stop and light this lamp.  The switch will clear the error.
+
+Tank Sel
+--------
+  The two lamps above this switch indicate when positions 4 and 5 of an
+instruction specify an invalid memory address (something other than 0-9 in
+the respective character position)  The top lamp indicates that position 4
+has an invalid address, the lower lamp indicates position 5 has an invalid
+address.  These error are cleared by depressing this switch.
+
+SR
+--
+  The row of lights below the error reset switches are connected to the Static
+Register and will show the contents of this register.  This is mainly useful
+during debugging to determine what instructions the computer is executing.
+
+  The row of switches below the static register lamps allow you to set/reset
+each bit position of the static register.  Lifting the switch will clear the
+bit while depressing the switch will set it.  Changing static register contents
+should only be done while the machine is in a stop state, otherwise
+unpredictable results could occur.  Normally the static register is changed
+during debugging operations so that an instruction could be modified before it
+is executed.
+
+  The three switches on the right allow you set either the instruction (Inst),
+memory address (Msr) or the entire contets of the static register (SR) to
+either binary zero (all bits cleared) or decimal zero (3).
+
+Program Counter
+---------------
+  Some instructions of the Univac take more than one cycle to execute.  The
+program counter is used to step through each step of the instruction.  The
+Porgram Counter lamps indicate which step of the instruction is currently 
+being performed.  These lamps indicate their value as a binary number from 0
+through 15.
+
+SR Matrix
+---------
+  In the center of the console is a matrix of letters and numbers with a set
+of lamps.  This matrix decodes the first instruction digit of the static 
+register making it easy to see which instruction is set up in the register.
+The instruction can be easily seen by looking at the letter/number at the 
+cross section of the lamps that are lit.
+
+  Below this matrix is another set of lamps labeled "Second Instruction Digit",
+these lamps decode the second character of the instruction.  The Overflow
+lamp will be lit anytime an overflow occurs in the arithmetic circuts.
+
+Block Subdivision Selector
+--------------------------
+  This set of buttons were used to alter the format of how tapes were written
+so that the produced tapes could be used with other equipment.  The lamps 
+above the buttons allowed the operator to see at a glance which buttons were
+depressed.  These buttons serve no purpse in the simulator, although they can
+be pressed and the indicater lamps will light.  The blank button on the far
+left of this group clears all the buttons in the group.
+
+Stall
+-----
+  This lamp when lit indicates that the computer is stalled.  If the contents
+of the Control Counter register do not change for 3 seconds this lamp will
+light.  This lamp will also light anytime the computer is stopped.
+
+Stop switch
+-----------
+  This switch sets the stop flip flop which will cause the computer to halt
+on the next time out period.  Although this switch can be used to stop the
+computer, it is not the preferred way to do so.  Using the IOS switch is the
+prefered way to halt the computer, especially if you intend to continue running
+the program after the halt.
+
+Stop lamp
+---------
+  This lamp will light anytime the stop flip flop is set
+
+Clear CY switch
+---------------
+  This switch when depressed will clear the cycle counter so that the next
+cycle executed will be the alpha cycle.  This switch should only be depressed
+when the computer is stopped, else unexpected behavior could result.
+
+Cycle Counter
+-------------
+  These two lamps indicate which cycle the computer is on.  With both lights
+off the computer is in the alpha cycle, only the right one lit is the beta
+cycle, only the left one lit is the gamma cycle and both lit is the delta
+cycle.  These are mainly useful while computer is stopped to see which phase
+the computer will execute next.
+
+Clear PC
+--------
+  This switch when depressed will clear the program counter back to zero.  This
+should only be done while the computer is stopped, else unpredictable behavior
+could result.
+
+Input Synchronizer Counter and Input Tank Counter
+-------------------------------------------------
+  These lamps indicate the number of bytes read from tape.  They are normally
+used to determine if a tape read error has occured.  Normally each tape read
+operation will read 60 words from the tape.  These two sets of lamps indicate
+how many bytes were read during the last tape read operation.
+
+  The Input Tank Counter lamps indicate the tens position of the count plus 1.
+This value is indicated in normal binary numbers.  If 60 words were read from
+the tape then this set of lamps would indicate 7.  If for example only 59
+words were read, then this set of lamps would indicate 6.
+
+  The input Synchronizer Counter lamps indicate the units portion of the count.
+This value is shown in excess-3 format.  On a proper read of 60 words then
+these lamps would indicated 3.  If only 57 words were read then these lamps
+would indicate 10.
+
+  Since tape errors cannot occur in the simulator, every read from tape will
+show 3 on the Input Synchronizer Counter lamps and 7 on the Input Tank Counter
+lamps.
+
+Clear I and O switch
+--------------------
+  Normally the I register is only cleared when its contents are written to 
+memory.  Unlike other registers, the I register is not cleared prior to a tape
+read.  Tape reads superimpose the read values into the I register, if there
+are values already in the register then words in the register will not
+necessarily be those from the tape.  In normal program operation after a tape
+is read, the command to write it to memory will also clear the I register ready
+for the next tape read.  However, when an initial read this will not be the 
+case.  This switch when depressed will clear the contents of the I (and O)
+register in preparation for an initial read.
+
+Output Synchronizer Counter and Output Tank Counter
+---------------------------------------------------
+  These sets of lamps work exactly like the input sets of lamps except they
+indicate the number of bytes written to tape.  Also like the input lamps, since
+the simulation cannot have errors while writing the tape, these lamps will
+always indicate the same value.
+
+Conditional Transfer Breakpoint Selector
+----------------------------------------
+  These buttons select which conditional transfers will result in breakpoints.
+When a conditional transfer instruction (Q or T) is executed the second 
+character of the instruction is checked against these buttons.  If the button
+associtated with the second character is pressed then the computer will stop
+before any transfer occurs.  For example, if the 5 button was pressed then a
+Q5 instruction will stop before the transfer.
+
+  The 'All' button will cause the system to perform a breakpoint on all
+conditional transfers.  The blank button to the left will clear all the
+conditional breakpoints.
+
+  The lamps above the buttons allow the operator to see at a glance which of
+the conditional breakpoint buttons are pressed.
+
+Conditional Transfer lamp
+-------------------------
+  When a breakpoint occurs as a result of a conditional transfer, this lamp
+indicates whether or not the transfer was the result of the test.  If the
+test will cause a transfer then this lamp will be lit, otherwise if the test
+failed then this lamp will be dark on the breakpoint.
+
+Transfer/No Transfer switch
+---------------------------
+  This is a locking 3 way switch that determines what will happen on 
+conditional breakpoints.  If the switch is in the normal (middle) position then
+the transfer will be based upon the test of the instruction.  When this switch
+is in the Transfer (lifted) position then upon resuming execution after the
+breakpoint the transfer will occur irregardless of the results of the test.
+When this switch is in the No Transfer (depressed) position then the transfer
+will not take place upon resuming execution irregardless of the actual test
+result.
+
+Breakpoint switch
+-----------------
+  This is a locking 2 way switch which determines how the breakpoint (,)
+command will work.  If this switch is in the normal (middle) position then
+all , commands will be ignored as if they are 00 commands.  When this switch
+is depressed then the system will halt on all , commands.
+
+Initial Read switch
+-------------------
+  This switch when depressed will perform the initial load of a program from
+tape into memory.  The initial read will read 60 words from the selected
+initial tape drive and then transfer these into the memory locations 000-059.
+This operation will also clear the CR register as well as the current phase.
+Once the initial read operation is complete the computer is all ready to
+begin execution from memory location 000.
+
+Clear C switch
+--------------
+  This switch when depressed will set the CR register to all zeroes.  This 
+switch is normally only used when the computer is stopped else unpredictable
+results could occur.
+
+Initial Tape Selector
+---------------------
+  This group of buttons selects which of the 10 tape drives the Initial Read
+function will read the initial program from.
+
+Output Selector
+---------------
+  This group of buttons selects what will actually be printed when a 50
+instruction is executed.  Under normal operations this should be set to M, but
+in debugging circumstances these allow for the various registers to be
+printed:
+     M  - Print the memory contents specified by the 50 instruction
+     A  - Print the contents of the A register
+     X  - Print the contents of the X register
+     L  - Print the contents of the L register
+     F  - Print the contents of the F register
+     C  - Print the contents of the CC register
+     CR - Print the contents of the CR register
+
+Input Ready lamp
+----------------
+  This lamp will be lit when the computer is expecting a word to be typed by
+the operator as a result of executing a 10 instruction.
+
+12 Digit lamp
+-------------
+  This lamp will be lit when the operater has typed the 12th character for
+a 10 instruction.  The Word Release will not resume operation of the computer
+if 12 characters have not been typed.
+
+Input Error lamp
+----------------
+  This lamp will be lit if the Word Release button is pressed with less then
+12 characters typed.
+
+Output Ready lamp
+-----------------
+  This lamp will be lit if the computer stops on a 50 instruction.
+
+Skip/Output Breakpoint switch
+-----------------------------
+  This 3 way locking switch defines how the 50 instruction is handled by the
+system.  In the normal (middle) position any 50 instructions will print the
+item specified by the Output Selector and continue operation.  If the switch
+is in the Skip (lifted) position then any 50 instruction encountered will be
+ignored as if it were a 00 instruction.  If the switch is in the Breakpoint
+(depressed) position then all 50 instrucions wil cause the computer to halt.
+This can be used to allow for changing the Output Selector during debugging.
+After the Output Selector is set then the operator can press the Start Bar
+to resume normal execution.
+
+Word Release
+------------
+  This button is pressed when the computer halted on a 10 instruction and the
+operator has typed 12 characters into the text box to the left.  Word Release
+will restart normal operation.
+
+Start Bar
+---------
+  This button is used to start normal operation anytime that the computer is
+halted.
+
+Interrupted Operation Switch (ISO)
+----------------------------------
+  This 5 way locking switch changes how the computer operates.  It is the main
+way to stop the machine while it is running (preferable to the Stop switch).
+The computer operates depending on the position of the swtich:
+
+  Normal          - In this mode the system runs in continuous mode, retrieving
+                    and executing instructions from memory.
+  One Instruction - In this mode the computer will halt after every change of
+                    the cycle counter.  It will stop at the beginning of each
+                    of the alpha, beta, gamma, and delta phases.
+  One Operation   - This mode is similar to the One Instruction mode in that
+                    it will stop any time the cycle counter changes, it will
+                    also stop any time the program counter changes.  For all
+                    single step instructions this mode will operate just like
+                    the One Instruction mode, whereas on multi-step 
+                    instructions, the One Instruction mode will execute all 
+                    steps before stopping, the One Operation mode will stop
+                    on each step of a multi step instruction.
+  One Step        - Not yet supported
+  One Addition    - Not yet supported
+
+
+Loading and running a program
+=============================
+1.  On the "Tape" tab, load or type in a program to run.
+2.  Select a tape drive to mount the tape on and then click "Mount".
+3.  On the "Main" tab, depress the swtich "Clear I and O"
+4.  Depress switch "Initial Read".
+5.  Click the "Start Bar"
